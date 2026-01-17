@@ -74,7 +74,6 @@ HTML_TEMPLATE = """
         }
         .liquid-btn:hover { transform: scale(1.05); background: var(--primary); color: white; }
 
-        /* BENTO CARDS WITH POP & GLOW */
         .bento-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; max-width: 1000px; margin: 60px auto; }
         .bento-card { 
             background: rgba(255, 255, 255, 0.5); 
@@ -99,7 +98,6 @@ HTML_TEMPLATE = """
         input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 10px; background: rgba(124,77,255,0.1); border-radius: 10px; }
         input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 24px; width: 24px; border-radius: 50%; background: var(--primary); cursor: pointer; margin-top: -7px; border: 3px solid white; }
 
-        /* CENTERED SLIDER LABELS */
         .slider-options { 
             display: flex; 
             justify-content: space-between; 
@@ -291,7 +289,14 @@ def index():
 def grade_api():
     try:
         data = request.json
-        prompt = f"Act as a {data['mode']}. Task: {data['details']}. Grade this homework based on the rubric."
+        # Enhanced Prompt for precise score extraction
+        prompt = (
+            f"Act as a {data['mode']}. Task: {data['details']}. "
+            "Grade this homework based on the rubric. "
+            "IMPORTANT: Your response MUST begin with the score in this format: 'FINAL_SCORE: [number]'. "
+            "For example: 'FINAL_SCORE: 85'. Then provide detailed feedback."
+        )
+
         hw_bin = base64.b64decode(data['image'].split(",")[1])
         content_list = [prompt, types.Part.from_bytes(data=hw_bin, mime_type=data['hw_mime'])]
 
@@ -302,8 +307,15 @@ def grade_api():
             content_list.append(f"Rubric: {data['rubric']}")
 
         response = client.models.generate_content(model=MODEL_ID, contents=content_list)
-        score = re.search(r'(\d+)', response.text).group(1) if re.search(r'(\d+)', response.text) else "0"
-        return jsonify({"score": score, "feedback": response.text})
+
+        # Precise Score Extraction
+        score_match = re.search(r'FINAL_SCORE:\s*(\d+)', response.text)
+        score = score_match.group(1) if score_match else "0"
+
+        # Clean up feedback to remove the score prefix for the user
+        feedback = response.text.replace(f"FINAL_SCORE: {score}", "").strip()
+
+        return jsonify({"score": score, "feedback": feedback})
     except Exception as e:
         return jsonify({"score": "!", "feedback": str(e)})
 
