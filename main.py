@@ -30,7 +30,7 @@ HTML_TEMPLATE = """
             --glass-border: rgba(255, 255, 255, 0.6);
         }
 
-        body { 
+        body {     
             font-family: 'Plus Jakarta Sans', sans-serif; 
             margin: 0; 
             background: var(--bg-grad);
@@ -295,6 +295,9 @@ def grade_api():
             "Grade this homework based on the rubric. "
             "IMPORTANT: Your response MUST begin with the score in this format: 'FINAL_SCORE: [number]'. "
             "For example: 'FINAL_SCORE: 85'. Then provide detailed feedback."
+            "Also, make sure to include a final percentage out of 100 of the graded assignment."
+            "Towards the end of your response, include a section titled 'Key Areas for Improvement' with bullet points"
+            
         )
 
         hw_bin = base64.b64decode(data['image'].split(",")[1])
