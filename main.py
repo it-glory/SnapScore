@@ -289,15 +289,13 @@ def index():
 def grade_api():
     try:
         data = request.json
-        # Enhanced Prompt for precise score extraction
+        # Prompt logic updated: We use a specific label and demand a percentage.
         prompt = (
-            f"Act as a {data['mode']}. Task: {data['details']}. "
-            "Grade this homework based on the rubric. "
-            "IMPORTANT: Your response MUST begin with the score in this format: 'FINAL_SCORE: [number]'. "
-            "For example: 'FINAL_SCORE: 85'. Then provide detailed feedback."
-            "Also, make sure to include a final percentage out of 100 of the graded assignment. Show calculations for the final score."
-            "Towards the end of your response, include a section titled 'Key Areas for Improvement' with bullet points"
-            
+            f"Act as a {data['mode']}. Assignment Task: {data['details']}. "
+            "Step 1: Grade the work based on the rubric. "
+            "Step 2: Show your step-by-step calculations. "
+            "Step 3: End with a section 'Key Areas for Improvement'. "
+            "Step 4: At the VERY END of your response, write the final total percentage in this EXACT format: 'FINAL_SCORE: [number]'."
         )
 
         hw_bin = base64.b64decode(data['image'].split(",")[1])
@@ -307,16 +305,17 @@ def grade_api():
             rub_bin = base64.b64decode(data['rubric'].split(",")[1])
             content_list.append(types.Part.from_bytes(data=rub_bin, mime_type="application/pdf"))
         else:
-            content_list.append(f"Rubric: {data['rubric']}")
+            content_list.append(f"Rubric provided: {data['rubric']}")
 
         response = client.models.generate_content(model=MODEL_ID, contents=content_list)
+        full_text = response.text
 
-        # Precise Score Extraction
-        score_match = re.search(r'FINAL_SCORE:\s*(\d+)', response.text)
-        score = score_match.group(1) if score_match else "0"
+        # Use Regex to find the LAST occurrence of FINAL_SCORE to avoid picking up numbers from the description
+        matches = re.findall(r'FINAL_SCORE:\s*(\d+)', full_text)
+        score = matches[-1] if matches else "0"
 
-        # Clean up feedback to remove the score prefix for the user
-        feedback = response.text.replace(f"FINAL_SCORE: {score}", "").strip()
+        # Remove the internal FINAL_SCORE tag from the text the user sees
+        feedback = re.sub(r'FINAL_SCORE:\s*\d+', '', full_text).strip()
 
         return jsonify({"score": score, "feedback": feedback})
     except Exception as e:
