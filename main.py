@@ -74,43 +74,6 @@ HTML_TEMPLATE = """
         }
         .liquid-btn:hover { transform: scale(1.05); background: var(--primary); color: white; }
 
-        .bento-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; max-width: 1000px; margin: 60px auto; }
-        .bento-card { 
-            background: rgba(255, 255, 255, 0.5); 
-            backdrop-filter: blur(20px); 
-            border: 1px solid var(--glass-border); 
-            border-radius: 30px; 
-            padding: 30px; 
-            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-            cursor: default;
-            position: relative;
-        }
-        .bento-card:hover {
-            transform: translateY(-15px) scale(1.03);
-            border: 1px solid var(--primary);
-            box-shadow: 0 25px 50px -12px var(--primary-glow);
-            background: rgba(255, 255, 255, 0.9);
-        }
-
-        .slider-section { margin: 25px 0; text-align: left; }
-        .slider-label { font-weight: 700; font-size: 0.9rem; color: #4a4a6a; margin-bottom: 10px; display: block; }
-        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
-        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 10px; background: rgba(124,77,255,0.1); border-radius: 10px; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 24px; width: 24px; border-radius: 50%; background: var(--primary); cursor: pointer; margin-top: -7px; border: 3px solid white; }
-
-        .slider-options { 
-            display: flex; 
-            justify-content: space-between; 
-            font-size: 0.75rem; 
-            font-weight: 800; 
-            margin-top: 10px;
-            color: #4a4a6a;
-        }
-        .slider-options span { flex: 1; }
-        .slider-options span:nth-child(1) { text-align: left; }
-        .slider-options span:nth-child(2) { text-align: center; }
-        .slider-options span:nth-child(3) { text-align: right; }
-
         .container { 
             background: var(--liquid-white); backdrop-filter: blur(30px);
             padding: 50px; border-radius: 40px; border: 1px solid var(--glass-border);
@@ -134,6 +97,16 @@ HTML_TEMPLATE = """
             box-shadow: 0 0 15px var(--primary-glow);
         }
         #loadingText { transition: opacity 0.4s ease; font-weight: 700; color: var(--primary); }
+
+        .bento-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; max-width: 1000px; margin: 60px auto; }
+        .bento-card { background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 30px; padding: 30px; transition: all 0.5s ease; position: relative; }
+
+        .slider-section { margin: 25px 0; text-align: left; }
+        .slider-label { font-weight: 700; font-size: 0.9rem; color: #4a4a6a; margin-bottom: 10px; display: block; }
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 10px; background: rgba(124,77,255,0.1); border-radius: 10px; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 24px; width: 24px; border-radius: 50%; background: var(--primary); cursor: pointer; margin-top: -7px; border: 3px solid white; }
+        .slider-options { display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 800; margin-top: 10px; color: #4a4a6a; }
     </style>
 </head>
 <body>
@@ -171,10 +144,17 @@ HTML_TEMPLATE = """
                     <span>Strict</span>
                 </div>
             </div>
-            <textarea id="details" style="height: 80px;" placeholder="What was the assignment?"></textarea>
-            <textarea id="rubric" style="height: 80px;" placeholder="Rubric/Criteria"></textarea>
+
+            <textarea id="details" style="height: 60px;" placeholder="What was the assignment?"></textarea>
+
+            <div class="input-hint">GRADING PROFILE (CUSTOM INSTRUCTIONS):</div>
+            <textarea id="customProfile" style="height: 80px;" placeholder="e.g. Focus on grammar, ignore handwriting, or be very encouraging..."></textarea>
+
+            <textarea id="rubric" style="height: 60px;" placeholder="Rubric/Criteria"></textarea>
+
             <div class="input-hint">OR UPLOAD RUBRIC PDF:</div>
             <input type="file" id="rubricInput" accept="application/pdf">
+
             <div class="input-hint">UPLOAD HOMEWORK:</div>
             <input type="file" id="fileInput" accept="image/*,application/pdf">
 
@@ -198,12 +178,6 @@ HTML_TEMPLATE = """
 
     <script>
         let lastFeedback = ""; let lastScore = "";
-        const lines = ["Grading that doesn't<br>feel like a chore.", "Reclaim your<br>Sunday nights.", "Identify the gaps.<br>Bridge the learning."];
-        let lineIdx = 0;
-        setInterval(() => {
-            const el = document.getElementById('hero-text');
-            if(el) { el.style.opacity = 0; setTimeout(() => { lineIdx = (lineIdx + 1) % lines.length; el.innerHTML = lines[lineIdx]; el.style.opacity = 1; }, 500); }
-        }, 4000);
 
         function showScreen(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -225,17 +199,6 @@ HTML_TEMPLATE = """
             progCont.style.display = 'block';
             progBar.style.width = '15%';
 
-            const loadMessages = ["Analyzing student work...", "Applying rubric...", "Generating feedback..."];
-            let loadIdx = 0;
-            loadText.innerText = loadMessages[0];
-
-            const loadInterval = setInterval(() => {
-                loadIdx = (loadIdx + 1) % loadMessages.length;
-                progBar.style.width = ((loadIdx + 1) * 33) + "%";
-                loadText.style.opacity = 0;
-                setTimeout(() => { loadText.innerText = loadMessages[loadIdx]; loadText.style.opacity = 1; }, 400);
-            }, 2500);
-
             const toBase64 = file => new Promise((res) => {
                 const reader = new FileReader();
                 reader.readAsDataURL(file);
@@ -255,6 +218,7 @@ HTML_TEMPLATE = """
                         image: hwData, hw_mime: hwFile.type,
                         rubric: rubData, rubric_mime: rubMime,
                         details: document.getElementById('details').value,
+                        custom_profile: document.getElementById('customProfile').value,
                         mode: ["Generous Mentor", "Fair Grader", "Strict Auditor"][document.getElementById('strictness').value]
                     })
                 });
@@ -268,7 +232,6 @@ HTML_TEMPLATE = """
                     showScreen('result-screen');
                 }, 500);
             } catch (err) { alert("Error connecting to AI."); } finally {
-                clearInterval(loadInterval);
                 btn.style.display = 'inline-block';
                 loadText.style.display = 'none';
                 progCont.style.display = 'none';
@@ -289,10 +252,11 @@ def index():
 def grade_api():
     try:
         data = request.json
-        # Prompt logic updated: We use a specific label and demand a percentage.
+        # The prompt now includes the Custom Profile injected by the teacher
         prompt = (
             f"Act as a {data['mode']}. Assignment Task: {data['details']}. "
-            "Step 1: Grade the work based on the rubric. "
+            f"Teacher's Custom Instructions: {data.get('custom_profile', 'None provided')}. "
+            "Step 1: Grade the work based on the rubric and the custom instructions. "
             "Step 2: Show your step-by-step calculations. "
             "Step 3: End with a section 'Key Areas for Improvement'. "
             "Step 4: At the VERY END of your response, write the final total percentage in this EXACT format: 'FINAL_SCORE: [number]'."
@@ -305,16 +269,14 @@ def grade_api():
             rub_bin = base64.b64decode(data['rubric'].split(",")[1])
             content_list.append(types.Part.from_bytes(data=rub_bin, mime_type="application/pdf"))
         else:
-            content_list.append(f"Rubric provided: {data['rubric']}")
+            content_list.append(f"Rubric: {data['rubric']}")
 
         response = client.models.generate_content(model=MODEL_ID, contents=content_list)
         full_text = response.text
 
-        # Use Regex to find the LAST occurrence of FINAL_SCORE to avoid picking up numbers from the description
+        # Use findall and [-1] to ensure we get the score at the end, not from descriptions
         matches = re.findall(r'FINAL_SCORE:\s*(\d+)', full_text)
         score = matches[-1] if matches else "0"
-
-        # Remove the internal FINAL_SCORE tag from the text the user sees
         feedback = re.sub(r'FINAL_SCORE:\s*\d+', '', full_text).strip()
 
         return jsonify({"score": score, "feedback": feedback})
