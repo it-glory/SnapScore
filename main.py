@@ -16,13 +16,11 @@ HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-YJGVQ3D38D"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
-
   gtag('config', 'G-YJGVQ3D38D');
 </script>
     <meta charset="UTF-8">
@@ -83,15 +81,27 @@ HTML_TEMPLATE = """
         }
         .liquid-btn:hover { transform: scale(1.05); background: var(--primary); color: white; }
 
-        .container { 
+        /* Dropdown Styling */
+        details {
             background: var(--liquid-white); backdrop-filter: blur(30px);
-            padding: 50px; border-radius: 40px; border: 1px solid var(--glass-border);
-            max-width: 650px; margin: 0 auto; text-align: center;
+            border-radius: 30px; border: 1px solid var(--glass-border);
+            max-width: 650px; margin: 0 auto; overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
         }
+        summary {
+            padding: 25px 40px; list-style: none; cursor: pointer;
+            font-weight: 800; font-size: 1.2rem; color: #1a1a2e;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        summary::after { content: '↓'; color: var(--primary); transition: transform 0.3s; }
+        details[open] summary::after { transform: rotate(180deg); }
+
+        .dropdown-content { padding: 0 40px 40px; text-align: center; }
+
         textarea, input[type="file"] { 
             width: 100%; border-radius: 18px; border: 1px solid rgba(0,0,0,0.05); 
             padding: 20px; margin-bottom: 20px; background: rgba(255,255,255,0.8);
-            font-family: inherit;
+            font-family: inherit; box-sizing: border-box;
         }
         .input-hint { text-align: left; font-size: 0.75rem; font-weight: 700; color: #7c4dff; margin: -15px 0 10px 10px; }
 
@@ -142,36 +152,49 @@ HTML_TEMPLATE = """
     </div>
 
     <div id="upload-screen" class="screen">
-        <div class="container">
-            <h2 style="font-weight:800; margin-bottom:20px;">Analysis Setup</h2>
-            <div class="slider-section">
-                <label class="slider-label">Grading Strictness</label>
-                <input type="range" id="strictness" min="0" max="2" step="1" value="1">
-                <div class="slider-options">
-                    <span>Generous</span>
-                    <span>Fair</span>
-                    <span>Strict</span>
+        <details open>
+            <summary>Analysis Setup</summary>
+            <div class="dropdown-content">
+                <div class="slider-section">
+                    <label class="slider-label">Grading Strictness</label>
+                    <input type="range" id="strictness" min="0" max="2" step="1" value="1">
+                    <div class="slider-options">
+                        <span>Generous</span>
+                        <span>Fair</span>
+                        <span>Strict</span>
+                    </div>
                 </div>
+
+                <textarea id="details" style="height: 60px;" placeholder="What was the assignment?"></textarea>
+
+                <div class="input-hint">GRADING PROFILE (CUSTOM INSTRUCTIONS):</div>
+                <textarea id="customProfile" style="height: 80px;" placeholder="e.g. Focus on grammar, ignore handwriting, or be very encouraging..."></textarea>
+
+                <textarea id="rubric" style="height: 60px;" placeholder="Rubric/Criteria"></textarea>
+
+                <div class="input-hint">OR UPLOAD RUBRIC PDF:</div>
+                <input type="file" id="rubricInput" accept="application/pdf">
+
+                <div class="input-hint">HOMEWORK CONTENT:</div>
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <button type="button" class="liquid-btn" style="padding: 8px 15px; font-size: 0.7rem;" onclick="toggleInputMode('file')">Upload File</button>
+                    <button type="button" class="liquid-btn" style="padding: 8px 15px; font-size: 0.7rem;" onclick="toggleInputMode('text')">Paste Text</button>
+                </div>
+
+                <div id="fileMode">
+                    <input type="file" id="fileInput" accept="image/*,application/pdf">
+                </div>
+
+                <div id="textMode" style="display: none;">
+                    <textarea id="textInput" style="height: 120px;" placeholder="Paste the student's work here..."></textarea>
+                </div>
+
+                <button class="liquid-btn" id="processBtn" style="width:100%" onclick="processAndGrade()">Grade Assignment</button>
+
+                <div class="progress-container" id="progressContainer"><div class="progress-bar" id="progressBar"></div></div>
+                <p id="loadingText" style="display:none;"></p>
             </div>
-
-            <textarea id="details" style="height: 60px;" placeholder="What was the assignment?"></textarea>
-
-            <div class="input-hint">GRADING PROFILE (CUSTOM INSTRUCTIONS):</div>
-            <textarea id="customProfile" style="height: 80px;" placeholder="e.g. Focus on grammar, ignore handwriting, or be very encouraging..."></textarea>
-
-            <textarea id="rubric" style="height: 60px;" placeholder="Rubric/Criteria"></textarea>
-
-            <div class="input-hint">OR UPLOAD RUBRIC PDF:</div>
-            <input type="file" id="rubricInput" accept="application/pdf">
-
-            <div class="input-hint">UPLOAD HOMEWORK:</div>
-            <input type="file" id="fileInput" accept="image/*,application/pdf">
-
-            <button class="liquid-btn" id="processBtn" style="width:100%" onclick="processAndGrade()">Grade Assignment</button>
-
-            <div class="progress-container" id="progressContainer"><div class="progress-bar" id="progressBar"></div></div>
-            <p id="loadingText" style="display:none;"></p>
-        </div>
+        </details>
     </div>
 
     <div id="result-screen" class="screen">
@@ -187,16 +210,26 @@ HTML_TEMPLATE = """
 
     <script>
         let lastFeedback = ""; let lastScore = "";
+        let currentInputMode = 'file';
 
         function showScreen(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(id).classList.add('active');
         }
 
+        function toggleInputMode(mode) {
+            currentInputMode = mode;
+            document.getElementById('fileMode').style.display = (mode === 'file') ? 'block' : 'none';
+            document.getElementById('textMode').style.display = (mode === 'text') ? 'block' : 'none';
+        }
+
         async function processAndGrade() {
             const hwFile = document.getElementById('fileInput').files[0];
+            const hwText = document.getElementById('textInput').value.trim();
             const rubFile = document.getElementById('rubricInput').files[0];
-            if (!hwFile) return alert("Please upload homework.");
+
+            if (currentInputMode === 'file' && !hwFile) return alert("Please upload homework.");
+            if (currentInputMode === 'text' && !hwText) return alert("Please paste homework text.");
 
             const btn = document.getElementById('processBtn');
             const loadText = document.getElementById('loadingText');
@@ -215,7 +248,15 @@ HTML_TEMPLATE = """
             });
 
             try {
-                const hwData = await toBase64(hwFile);
+                let hwData, hwMime;
+                if (currentInputMode === 'file') {
+                    hwData = await toBase64(hwFile);
+                    hwMime = hwFile.type;
+                } else {
+                    hwData = hwText;
+                    hwMime = "text/plain";
+                }
+
                 let rubData = document.getElementById('rubric').value;
                 let rubMime = "text/plain";
                 if (rubFile) { rubData = await toBase64(rubFile); rubMime = "application/pdf"; }
@@ -224,7 +265,7 @@ HTML_TEMPLATE = """
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
-                        image: hwData, hw_mime: hwFile.type,
+                        image: hwData, hw_mime: hwMime,
                         rubric: rubData, rubric_mime: rubMime,
                         details: document.getElementById('details').value,
                         custom_profile: document.getElementById('customProfile').value,
@@ -261,7 +302,6 @@ def index():
 def grade_api():
     try:
         data = request.json
-        # The prompt now includes the Custom Profile injected by the teacher
         prompt = (
             f"Act as a {data['mode']}. Assignment Task: {data['details']}. "
             f"Teacher's Custom Instructions: {data.get('custom_profile', 'None provided')}. "
@@ -271,8 +311,11 @@ def grade_api():
             "Step 4: At the VERY END of your response, write the final total percentage in this EXACT format: 'FINAL_SCORE: [number]'."
         )
 
-        hw_bin = base64.b64decode(data['image'].split(",")[1])
-        content_list = [prompt, types.Part.from_bytes(data=hw_bin, mime_type=data['hw_mime'])]
+        if data['hw_mime'] == "text/plain":
+            content_list = [prompt, f"Student Work to grade: {data['image']}"]
+        else:
+            hw_bin = base64.b64decode(data['image'].split(",")[1])
+            content_list = [prompt, types.Part.from_bytes(data=hw_bin, mime_type=data['hw_mime'])]
 
         if data['rubric_mime'] == "application/pdf":
             rub_bin = base64.b64decode(data['rubric'].split(",")[1])
@@ -283,7 +326,6 @@ def grade_api():
         response = client.models.generate_content(model=MODEL_ID, contents=content_list)
         full_text = response.text
 
-        # Use findall and [-1] to ensure we get the score at the end, not from descriptions
         matches = re.findall(r'FINAL_SCORE:\s*(\d+)', full_text)
         score = matches[-1] if matches else "0"
         feedback = re.sub(r'FINAL_SCORE:\s*\d+', '', full_text).strip()
