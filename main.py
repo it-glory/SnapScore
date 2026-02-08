@@ -9,6 +9,7 @@ from fpdf import FPDF
 
 app = Flask(__name__)
 
+# Ensure your API Key is set in your environment variables
 client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 MODEL_ID = "gemini-2.0-flash"
 
@@ -16,13 +17,13 @@ HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-YJGVQ3D38D"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-YJGVQ3D38D');
-</script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YJGVQ3D38D"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-YJGVQ3D38D');
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Snap Score - Liquid Glass Edition</title>
@@ -68,8 +69,7 @@ HTML_TEMPLATE = """
         .hero { text-align: center; max-width: 800px; margin: 40px auto; }
         .hero h1 { 
             font-size: clamp(2.5rem, 8vw, 4rem); font-weight: 800; letter-spacing: -3px; 
-            line-height: 1.1; color: #1a1a2e; margin-bottom: 25px; transition: opacity 0.5s ease;
-            min-height: 2.2em;
+            line-height: 1.1; color: #1a1a2e; margin-bottom: 25px;
         }
 
         .liquid-btn {
@@ -85,14 +85,13 @@ HTML_TEMPLATE = """
             background: var(--liquid-white); backdrop-filter: blur(30px);
             border-radius: 30px; border: 1px solid var(--glass-border);
             max-width: 650px; margin: 0 auto 20px; overflow: hidden;
-            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
         }
         summary {
             padding: 20px 35px; list-style: none; cursor: pointer;
             font-weight: 800; font-size: 1.1rem; color: #1a1a2e;
             display: flex; justify-content: space-between; align-items: center;
         }
-        summary::after { content: '↓'; color: var(--primary); transition: transform 0.3s; font-size: 1.2rem; }
+        summary::after { content: '↓'; color: var(--primary); transition: transform 0.3s; }
         details[open] summary::after { transform: rotate(180deg); }
 
         .dropdown-content { padding: 0 35px 30px; text-align: center; }
@@ -107,17 +106,18 @@ HTML_TEMPLATE = """
         .progress-container {
             width: 100%; height: 12px; background: rgba(0,0,0,0.05);
             border-radius: 20px; margin: 20px 0 10px; overflow: hidden; display: none;
-            border: 1px solid var(--glass-border);
         }
         .progress-bar {
             width: 0%; height: 100%; background: var(--primary);
-            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 0 15px var(--primary-glow);
+            transition: width 0.6s ease;
         }
-        #loadingText { transition: opacity 0.4s ease; font-weight: 700; color: var(--primary); text-align: center; }
+        #loadingText { font-weight: 700; color: var(--primary); text-align: center; }
 
-        .bento-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; max-width: 1000px; margin: 60px auto; }
-        .bento-card { background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 30px; padding: 30px; transition: all 0.5s ease; position: relative; }
+        .container { 
+            background: var(--liquid-white); backdrop-filter: blur(30px);
+            padding: 50px; border-radius: 40px; border: 1px solid var(--glass-border);
+            max-width: 650px; margin: 0 auto; text-align: center;
+        }
 
         .slider-section { margin: 15px 0; text-align: left; }
         .slider-label { font-weight: 700; font-size: 0.9rem; color: #4a4a6a; margin-bottom: 10px; display: block; }
@@ -139,14 +139,9 @@ HTML_TEMPLATE = """
 
     <div id="home-screen" class="screen active">
         <div class="hero">
-            <h1 id="hero-text">Grading that doesn't<br>feel like a chore.</h1>
+            <h1>Grading that doesn't<br>feel like a chore.</h1>
             <p>Experience ultra-precise handwriting analysis with AI Vision speed.</p>
             <button class="liquid-btn" onclick="showScreen('upload-screen')">Start Grading ⚡</button>
-        </div>
-        <div class="bento-grid">
-            <div class="bento-card"><h3>Refractive OCR</h3><p>Reads messy ink with high accuracy.</p></div>
-            <div class="bento-card" style="background: var(--primary-liquid);"><h3>Mentorship Mode</h3><p>Tuned to find the best in every paper.</p></div>
-            <div class="bento-card"><h3>Quick Export</h3><p>Glass-themed PDF reports in one click.</p></div>
         </div>
     </div>
 
@@ -157,15 +152,11 @@ HTML_TEMPLATE = """
                 <div class="slider-section">
                     <label class="slider-label">Grading Strictness</label>
                     <input type="range" id="strictness" min="0" max="2" step="1" value="1">
-                    <div class="slider-options">
-                        <span>Generous</span>
-                        <span>Fair</span>
-                        <span>Strict</span>
-                    </div>
+                    <div class="slider-options"><span>Generous</span><span>Fair</span><span>Strict</span></div>
                 </div>
                 <textarea id="details" style="height: 60px;" placeholder="What was the assignment?"></textarea>
-                <div class="input-hint">GRADING PROFILE (CUSTOM INSTRUCTIONS):</div>
-                <textarea id="customProfile" style="height: 80px;" placeholder="e.g. Focus on grammar, ignore handwriting..."></textarea>
+                <div class="input-hint">GRADING PROFILE:</div>
+                <textarea id="customProfile" style="height: 80px;" placeholder="e.g. Focus on grammar..."></textarea>
             </div>
         </details>
 
@@ -178,23 +169,17 @@ HTML_TEMPLATE = """
             </div>
         </details>
 
-        <div class="container" style="max-width: 650px; background: transparent; padding: 0; border: none; backdrop-filter: none;">
-            <div class="input-hint" style="margin-left: 10px;">HOMEWORK CONTENT:</div>
+        <div style="max-width: 650px; margin: 0 auto; text-align: center;">
+            <div class="input-hint">HOMEWORK CONTENT:</div>
             <div style="display: flex; gap: 10px; margin-bottom: 10px; justify-content: center;">
-                <button type="button" class="liquid-btn" style="padding: 10px 20px; font-size: 0.75rem;" onclick="toggleInputMode('file')">Upload File</button>
-                <button type="button" class="liquid-btn" style="padding: 10px 20px; font-size: 0.75rem;" onclick="toggleInputMode('text')">Paste Text</button>
+                <button type="button" class="liquid-btn" onclick="toggleInputMode('file')">File</button>
+                <button type="button" class="liquid-btn" onclick="toggleInputMode('text')">Text</button>
             </div>
 
-            <div id="fileMode" style="max-width: 650px; margin: 0 auto;">
-                <input type="file" id="fileInput" accept="image/*,application/pdf">
-            </div>
-
-            <div id="textMode" style="display: none; max-width: 650px; margin: 0 auto;">
-                <textarea id="textInput" style="height: 120px;" placeholder="Paste the student's work here..."></textarea>
-            </div>
+            <div id="fileMode"><input type="file" id="fileInput" accept="image/*,application/pdf"></div>
+            <div id="textMode" style="display: none;"><textarea id="textInput" style="height: 120px;" placeholder="Paste text here..."></textarea></div>
 
             <button class="liquid-btn" id="processBtn" style="width:100%" onclick="processAndGrade()">Grade Assignment</button>
-
             <div class="progress-container" id="progressContainer"><div class="progress-bar" id="progressBar"></div></div>
             <p id="loadingText" style="display:none;"></p>
         </div>
@@ -204,15 +189,11 @@ HTML_TEMPLATE = """
         <div class="container" style="max-width:850px;">
             <div id="displayScore" style="font-size: 8rem; font-weight: 800; color: var(--primary);">--%</div>
             <div id="displayFeedback" style="text-align: left; background: white; padding: 35px; border-radius: 25px; white-space: pre-line;"></div>
-            <div style="margin-top:40px; display: flex; gap: 15px; justify-content: center;">
-                <button class="liquid-btn" onclick="showScreen('home-screen')">New Grade</button>
-                <button class="liquid-btn" style="background: #1a1a2e; color: white;" onclick="downloadPDF()">Export PDF</button>
-            </div>
+            <button class="liquid-btn" onclick="showScreen('home-screen')">New Grade</button>
         </div>
     </div>
 
     <script>
-        let lastFeedback = ""; let lastScore = "";
         let currentInputMode = 'file';
 
         function showScreen(id) {
@@ -231,23 +212,16 @@ HTML_TEMPLATE = """
             const hwText = document.getElementById('textInput').value.trim();
             const rubFile = document.getElementById('rubricInput').files[0];
 
-            if (currentInputMode === 'file' && !hwFile) return alert("Please upload homework.");
-            if (currentInputMode === 'text' && !hwText) return alert("Please paste homework text.");
+            if (currentInputMode === 'file' && !hwFile) return alert("Please upload a file.");
+            if (currentInputMode === 'text' && !hwText) return alert("Please paste text.");
 
-            // Auto-close dropdowns
             document.getElementById('detailsDropdown').removeAttribute('open');
             document.getElementById('rubricDropdown').removeAttribute('open');
 
-            const btn = document.getElementById('processBtn');
-            const loadText = document.getElementById('loadingText');
-            const progCont = document.getElementById('progressContainer');
             const progBar = document.getElementById('progressBar');
-
-            btn.style.display = 'none';
-            loadText.innerText = "Analyzing Content...";
-            loadText.style.display = 'block';
-            progCont.style.display = 'block';
-            progBar.style.width = '15%';
+            document.getElementById('progressContainer').style.display = 'block';
+            document.getElementById('processBtn').style.display = 'none';
+            progBar.style.width = '30%';
 
             const toBase64 = file => new Promise((res) => {
                 const reader = new FileReader();
@@ -282,24 +256,47 @@ HTML_TEMPLATE = """
                 });
 
                 const data = await response.json();
-                progBar.style.width = '100%';
-                setTimeout(() => {
-                    lastScore = data.score; lastFeedback = data.feedback;
-                    document.getElementById('displayScore').innerText = data.score + "%";
-                    document.getElementById('displayFeedback').innerText = data.feedback;
-                    showScreen('result-screen');
-                }, 500);
+                document.getElementById('displayScore').innerText = data.score + "%";
+                document.getElementById('displayFeedback').innerText = data.feedback;
+                showScreen('result-screen');
             } catch (err) { alert("Error connecting to AI."); } finally {
-                btn.style.display = 'inline-block';
-                loadText.style.display = 'none';
-                progCont.style.display = 'none';
+                document.getElementById('processBtn').style.display = 'block';
+                document.getElementById('progressContainer').style.display = 'none';
             }
         }
-
-        function downloadPDF() { window.location.href = `/api/download?score=${lastScore}&feedback=${encodeURIComponent(lastFeedback)}`; }
     </script>
 </body>
 </html>
 """
 
-# ... [REST OF YOUR PYTHON FLASK CODE REMAINS THE SAME]
+@app.route('/')
+def index():
+    return render_template_string(HTML_TEMPLATE)
+
+@app.route('/api/grade', methods=['POST'])
+def grade_api():
+    try:
+        data = request.json
+        prompt = f"Act as a {data['mode']}. Assignment: {data['details']}. Profile: {data['custom_profile']}. Grade it. End with 'FINAL_SCORE: [number]'"
+
+        if data['hw_mime'] == "text/plain":
+            content_list = [prompt, f"Work: {data['image']}"]
+        else:
+            hw_bin = base64.b64decode(data['image'].split(",")[1])
+            content_list = [prompt, types.Part.from_bytes(data=hw_bin, mime_type=data['hw_mime'])]
+
+        if data['rubric_mime'] == "application/pdf":
+            rub_bin = base64.b64decode(data['rubric'].split(",")[1])
+            content_list.append(types.Part.from_bytes(data=rub_bin, mime_type="application/pdf"))
+        else:
+            content_list.append(f"Rubric: {data['rubric']}")
+
+        response = client.models.generate_content(model=MODEL_ID, contents=content_list)
+        score_match = re.search(r'FINAL_SCORE:\s*(\d+)', response.text)
+        score = score_match.group(1) if score_match else "0"
+        return jsonify({"score": score, "feedback": response.text.replace(f"FINAL_SCORE: {score}", "")})
+    except Exception as e:
+        return jsonify({"score": "!", "feedback": str(e)})
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
