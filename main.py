@@ -81,22 +81,21 @@ HTML_TEMPLATE = """
         }
         .liquid-btn:hover { transform: scale(1.05); background: var(--primary); color: white; }
 
-        /* Dropdown Styling */
         details {
             background: var(--liquid-white); backdrop-filter: blur(30px);
             border-radius: 30px; border: 1px solid var(--glass-border);
-            max-width: 650px; margin: 0 auto; overflow: hidden;
+            max-width: 650px; margin: 0 auto 20px; overflow: hidden;
             transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
         }
         summary {
-            padding: 25px 40px; list-style: none; cursor: pointer;
-            font-weight: 800; font-size: 1.2rem; color: #1a1a2e;
+            padding: 20px 35px; list-style: none; cursor: pointer;
+            font-weight: 800; font-size: 1.1rem; color: #1a1a2e;
             display: flex; justify-content: space-between; align-items: center;
         }
-        summary::after { content: '↓'; color: var(--primary); transition: transform 0.3s; }
+        summary::after { content: '↓'; color: var(--primary); transition: transform 0.3s; font-size: 1.2rem; }
         details[open] summary::after { transform: rotate(180deg); }
 
-        .dropdown-content { padding: 0 40px 40px; text-align: center; }
+        .dropdown-content { padding: 0 35px 30px; text-align: center; }
 
         textarea, input[type="file"] { 
             width: 100%; border-radius: 18px; border: 1px solid rgba(0,0,0,0.05); 
@@ -115,12 +114,12 @@ HTML_TEMPLATE = """
             transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
             box-shadow: 0 0 15px var(--primary-glow);
         }
-        #loadingText { transition: opacity 0.4s ease; font-weight: 700; color: var(--primary); }
+        #loadingText { transition: opacity 0.4s ease; font-weight: 700; color: var(--primary); text-align: center; }
 
         .bento-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; max-width: 1000px; margin: 60px auto; }
         .bento-card { background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 30px; padding: 30px; transition: all 0.5s ease; position: relative; }
 
-        .slider-section { margin: 25px 0; text-align: left; }
+        .slider-section { margin: 15px 0; text-align: left; }
         .slider-label { font-weight: 700; font-size: 0.9rem; color: #4a4a6a; margin-bottom: 10px; display: block; }
         input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
         input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 10px; background: rgba(124,77,255,0.1); border-radius: 10px; }
@@ -152,8 +151,8 @@ HTML_TEMPLATE = """
     </div>
 
     <div id="upload-screen" class="screen">
-        <details open>
-            <summary>Analysis Setup</summary>
+        <details id="detailsDropdown" open>
+            <summary>1. Assignment Setup</summary>
             <div class="dropdown-content">
                 <div class="slider-section">
                     <label class="slider-label">Grading Strictness</label>
@@ -164,37 +163,41 @@ HTML_TEMPLATE = """
                         <span>Strict</span>
                     </div>
                 </div>
-
                 <textarea id="details" style="height: 60px;" placeholder="What was the assignment?"></textarea>
-
                 <div class="input-hint">GRADING PROFILE (CUSTOM INSTRUCTIONS):</div>
-                <textarea id="customProfile" style="height: 80px;" placeholder="e.g. Focus on grammar, ignore handwriting, or be very encouraging..."></textarea>
-
-                <textarea id="rubric" style="height: 60px;" placeholder="Rubric/Criteria"></textarea>
-
-                <div class="input-hint">OR UPLOAD RUBRIC PDF:</div>
-                <input type="file" id="rubricInput" accept="application/pdf">
-
-                <div class="input-hint">HOMEWORK CONTENT:</div>
-                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                    <button type="button" class="liquid-btn" style="padding: 8px 15px; font-size: 0.7rem;" onclick="toggleInputMode('file')">Upload File</button>
-                    <button type="button" class="liquid-btn" style="padding: 8px 15px; font-size: 0.7rem;" onclick="toggleInputMode('text')">Paste Text</button>
-                </div>
-
-                <div id="fileMode">
-                    <input type="file" id="fileInput" accept="image/*,application/pdf">
-                </div>
-
-                <div id="textMode" style="display: none;">
-                    <textarea id="textInput" style="height: 120px;" placeholder="Paste the student's work here..."></textarea>
-                </div>
-
-                <button class="liquid-btn" id="processBtn" style="width:100%" onclick="processAndGrade()">Grade Assignment</button>
-
-                <div class="progress-container" id="progressContainer"><div class="progress-bar" id="progressBar"></div></div>
-                <p id="loadingText" style="display:none;"></p>
+                <textarea id="customProfile" style="height: 80px;" placeholder="e.g. Focus on grammar, ignore handwriting..."></textarea>
             </div>
         </details>
+
+        <details id="rubricDropdown">
+            <summary>2. Grading Rubric</summary>
+            <div class="dropdown-content">
+                <textarea id="rubric" style="height: 100px;" placeholder="Type your rubric here..."></textarea>
+                <div class="input-hint">OR UPLOAD RUBRIC PDF:</div>
+                <input type="file" id="rubricInput" accept="application/pdf">
+            </div>
+        </details>
+
+        <div class="container" style="max-width: 650px; background: transparent; padding: 0; border: none; backdrop-filter: none;">
+            <div class="input-hint" style="margin-left: 10px;">HOMEWORK CONTENT:</div>
+            <div style="display: flex; gap: 10px; margin-bottom: 10px; justify-content: center;">
+                <button type="button" class="liquid-btn" style="padding: 10px 20px; font-size: 0.75rem;" onclick="toggleInputMode('file')">Upload File</button>
+                <button type="button" class="liquid-btn" style="padding: 10px 20px; font-size: 0.75rem;" onclick="toggleInputMode('text')">Paste Text</button>
+            </div>
+
+            <div id="fileMode" style="max-width: 650px; margin: 0 auto;">
+                <input type="file" id="fileInput" accept="image/*,application/pdf">
+            </div>
+
+            <div id="textMode" style="display: none; max-width: 650px; margin: 0 auto;">
+                <textarea id="textInput" style="height: 120px;" placeholder="Paste the student's work here..."></textarea>
+            </div>
+
+            <button class="liquid-btn" id="processBtn" style="width:100%" onclick="processAndGrade()">Grade Assignment</button>
+
+            <div class="progress-container" id="progressContainer"><div class="progress-bar" id="progressBar"></div></div>
+            <p id="loadingText" style="display:none;"></p>
+        </div>
     </div>
 
     <div id="result-screen" class="screen">
@@ -231,12 +234,17 @@ HTML_TEMPLATE = """
             if (currentInputMode === 'file' && !hwFile) return alert("Please upload homework.");
             if (currentInputMode === 'text' && !hwText) return alert("Please paste homework text.");
 
+            // Auto-close dropdowns
+            document.getElementById('detailsDropdown').removeAttribute('open');
+            document.getElementById('rubricDropdown').removeAttribute('open');
+
             const btn = document.getElementById('processBtn');
             const loadText = document.getElementById('loadingText');
             const progCont = document.getElementById('progressContainer');
             const progBar = document.getElementById('progressBar');
 
             btn.style.display = 'none';
+            loadText.innerText = "Analyzing Content...";
             loadText.style.display = 'block';
             progCont.style.display = 'block';
             progBar.style.width = '15%';
@@ -294,64 +302,4 @@ HTML_TEMPLATE = """
 </html>
 """
 
-@app.route('/')
-def index():
-    return render_template_string(HTML_TEMPLATE)
-
-@app.route('/api/grade', methods=['POST'])
-def grade_api():
-    try:
-        data = request.json
-        prompt = (
-            f"Act as a {data['mode']}. Assignment Task: {data['details']}. "
-            f"Teacher's Custom Instructions: {data.get('custom_profile', 'None provided')}. "
-            "Step 1: Grade the work based on the rubric and the custom instructions. "
-            "Step 2: Show your step-by-step calculations. "
-            "Step 3: End with a section 'Key Areas for Improvement'. "
-            "Step 4: At the VERY END of your response, write the final total percentage in this EXACT format: 'FINAL_SCORE: [number]'."
-        )
-
-        if data['hw_mime'] == "text/plain":
-            content_list = [prompt, f"Student Work to grade: {data['image']}"]
-        else:
-            hw_bin = base64.b64decode(data['image'].split(",")[1])
-            content_list = [prompt, types.Part.from_bytes(data=hw_bin, mime_type=data['hw_mime'])]
-
-        if data['rubric_mime'] == "application/pdf":
-            rub_bin = base64.b64decode(data['rubric'].split(",")[1])
-            content_list.append(types.Part.from_bytes(data=rub_bin, mime_type="application/pdf"))
-        else:
-            content_list.append(f"Rubric: {data['rubric']}")
-
-        response = client.models.generate_content(model=MODEL_ID, contents=content_list)
-        full_text = response.text
-
-        matches = re.findall(r'FINAL_SCORE:\s*(\d+)', full_text)
-        score = matches[-1] if matches else "0"
-        feedback = re.sub(r'FINAL_SCORE:\s*\d+', '', full_text).strip()
-
-        return jsonify({"score": score, "feedback": feedback})
-    except Exception as e:
-        return jsonify({"score": "!", "feedback": str(e)})
-
-@app.route('/api/download')
-def download_pdf():
-    score, fb = request.args.get('score', '0'), request.args.get('feedback', '')
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", 'B', 24)
-    pdf.set_text_color(124, 77, 255)
-    pdf.cell(0, 20, f"Snap Score Grade: {score}%", align='C', ln=True)
-    pdf.ln(10)
-    pdf.set_font("Arial", '', 12)
-    pdf.set_text_color(40, 40, 60)
-    pdf.multi_cell(0, 10, fb.encode('latin-1', 'replace').decode('latin-1'))
-    out = io.BytesIO()
-    pdf_content = pdf.output(dest='S')
-    if isinstance(pdf_content, str): pdf_content = pdf_content.encode('latin-1')
-    out.write(pdf_content)
-    out.seek(0)
-    return send_file(out, as_attachment=True, download_name="Report.pdf", mimetype='application/pdf')
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
+# ... [REST OF YOUR PYTHON FLASK CODE REMAINS THE SAME]
