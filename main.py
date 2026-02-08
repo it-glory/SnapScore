@@ -16,13 +16,6 @@ HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YJGVQ3D38D"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-YJGVQ3D38D');
-    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Snap Score - Liquid Glass Edition</title>
@@ -71,16 +64,13 @@ HTML_TEMPLATE = """
             line-height: 1.1; color: #1a1a2e; margin-bottom: 25px;
         }
 
-        /* Bento Grid & Levitation */
         .bento-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; max-width: 1000px; margin: 60px auto; }
         .bento-card { 
             background: var(--liquid-white); backdrop-filter: blur(20px); 
             border: 1px solid var(--glass-border); border-radius: 30px; 
             padding: 30px; transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1); 
-            position: relative; cursor: default;
         }
-        .bento-card:hover { transform: translateY(-15px); box-shadow: 0 20px 40px rgba(124, 77, 255, 0.1); border-color: var(--primary); }
-        .bento-card h3 { color: var(--primary); margin-top: 0; }
+        .bento-card:hover { transform: translateY(-12px); box-shadow: 0 20px 40px rgba(124, 77, 255, 0.1); border-color: var(--primary); }
 
         .liquid-btn {
             position: relative; background: var(--primary-liquid); color: var(--primary);
@@ -95,7 +85,6 @@ HTML_TEMPLATE = """
             background: var(--liquid-white); backdrop-filter: blur(30px);
             border-radius: 30px; border: 1px solid var(--glass-border);
             max-width: 650px; margin: 0 auto 20px; overflow: hidden;
-            transition: all 0.4s ease;
         }
         summary {
             padding: 20px 35px; list-style: none; cursor: pointer;
@@ -163,7 +152,7 @@ HTML_TEMPLATE = """
             </div>
         </details>
 
-        <details id="rubricDropdown">
+        <details id="rubricDropdown" open>
             <summary>2. Grading Rubric</summary>
             <div class="dropdown-content">
                 <textarea id="rubric" style="height: 100px;" placeholder="Type your rubric here..."></textarea>
@@ -172,7 +161,7 @@ HTML_TEMPLATE = """
             </div>
         </details>
 
-        <details id="contentDropdown">
+        <details id="contentDropdown" open>
             <summary>3. Homework Content</summary>
             <div class="dropdown-content">
                 <div style="display: flex; gap: 10px; margin-bottom: 20px; justify-content: center;">
@@ -195,11 +184,15 @@ HTML_TEMPLATE = """
         <div style="max-width: 850px; margin: 0 auto; text-align: center; background: var(--liquid-white); padding: 40px; border-radius: 40px; border: 1px solid var(--glass-border);">
             <div id="displayScore" style="font-size: 8rem; font-weight: 800; color: var(--primary);">--%</div>
             <div id="displayFeedback" style="text-align: left; background: white; padding: 35px; border-radius: 25px; white-space: pre-line; margin-bottom: 30px;"></div>
-            <button class="liquid-btn" onclick="showScreen('home-screen')">New Grade</button>
+            <div style="display: flex; gap: 15px; justify-content: center;">
+                <button class="liquid-btn" onclick="showScreen('home-screen')">New Grade</button>
+                <button class="liquid-btn" style="background: #1a1a2e; color: white;" onclick="downloadPDF()">Export PDF</button>
+            </div>
         </div>
     </div>
 
     <script>
+        let lastFeedback = ""; let lastScore = "";
         let currentInputMode = 'file';
 
         function showScreen(id) {
@@ -219,13 +212,11 @@ HTML_TEMPLATE = """
             if (currentInputMode === 'file' && !hwFile) return alert("Please upload a file.");
             if (currentInputMode === 'text' && !hwText) return alert("Please paste text.");
 
-            // Close all dropdowns to focus on progress
             document.querySelectorAll('details').forEach(d => d.removeAttribute('open'));
-
             document.getElementById('progressContainer').style.display = 'block';
             document.getElementById('loadingText').style.display = 'block';
             document.getElementById('processBtn').style.display = 'none';
-            document.getElementById('progressBar').style.width = '40%';
+            document.getElementById('progressBar').style.width = '50%';
 
             const toBase64 = file => new Promise((res) => {
                 const reader = new FileReader();
@@ -261,6 +252,7 @@ HTML_TEMPLATE = """
                 });
 
                 const data = await response.json();
+                lastScore = data.score; lastFeedback = data.feedback;
                 document.getElementById('displayScore').innerText = data.score + "%";
                 document.getElementById('displayFeedback').innerText = data.feedback;
                 showScreen('result-screen');
@@ -270,6 +262,8 @@ HTML_TEMPLATE = """
                 document.getElementById('loadingText').style.display = 'none';
             }
         }
+
+        function downloadPDF() { window.location.href = `/api/download?score=${lastScore}&feedback=${encodeURIComponent(lastFeedback)}`; }
     </script>
 </body>
 </html>
@@ -283,7 +277,7 @@ def index():
 def grade_api():
     try:
         data = request.json
-        prompt = f"Act as a {data['mode']}. Assignment: {data['details']}. Profile: {data['custom_profile']}. Grade the work. At the very end, write 'FINAL_SCORE: [number]'."
+        prompt = f"Act as a {data['mode']}. Assignment: {data['details']}. Profile: {data['custom_profile']}. Grade the work. End with 'FINAL_SCORE: [number]'."
 
         if data['hw_mime'] == "text/plain":
             content_list = [prompt, f"Work: {data['image']}"]
@@ -304,6 +298,22 @@ def grade_api():
         return jsonify({"score": score, "feedback": feedback})
     except Exception as e:
         return jsonify({"score": "!", "feedback": str(e)})
+
+@app.route('/api/download')
+def download_pdf():
+    score, fb = request.args.get('score', '0'), request.args.get('feedback', '')
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", 'B', 24)
+    pdf.cell(0, 20, f"Grade Report: {score}%", align='C', ln=True)
+    pdf.set_font("Arial", '', 12)
+    pdf.multi_cell(0, 10, fb.encode('latin-1', 'replace').decode('latin-1'))
+    out = io.BytesIO()
+    pdf_content = pdf.output(dest='S')
+    if isinstance(pdf_content, str): pdf_content = pdf_content.encode('latin-1')
+    out.write(pdf_content)
+    out.seek(0)
+    return send_file(out, as_attachment=True, download_name="Report.pdf", mimetype='application/pdf')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
